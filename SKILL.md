@@ -1,0 +1,85 @@
+---
+name: github-project-publish
+description: GitHub 项目发布全流程技能。把本地项目（尤其含自定义 Skill、文档、代码的仓库）从零发布到 GitHub 并完成首轮提交。触发场景：(1) 用户要求"把项目发布/上传到 GitHub"、"初始化 Git 仓库"、"提交推送"；(2) 用户要求"完善 README"、"添加 LICENSE"、"检查项目安全隐患"后执行发布；(3) 用户要求创建远程仓库（Public/Private）并推送 main 分支。技能固定覆盖：CLI 环境检查（git/gh 安装、版本、gh 登录状态）→ 项目文档准备（README/LICENSE）→ 安全隐患检查 → 仓库信息记录 → 提交上传 → 全路径反馈。执行中涉及安装软件、浏览器授权、创建公开仓库、改写历史/强制推送等动作时，必须先向用户说明并等待确认；不得向用户索要密码或 Token。
+---
+
+# GitHub 项目发布
+
+把本地项目完整发布到 GitHub 的标准流水线。以"检查→准备→检查安全→记录→提交→反馈"为固定顺序，任何一步发现问题都要停下向用户报告，而不是跳过。
+
+## 执行总览
+
+| 阶段 | 动作 | 产出 |
+|------|------|------|
+| A 环境检查 | 检查 git/gh 安装与版本、gh 登录 | 环境结论 |
+| B 项目准备 | 完善 README.md、添加 LICENSE | 文档文件 |
+| C 安全检查 | 扫描敏感信息，报告结果 | 检查报告 |
+| D 仓库记录 | 记录/创建远程仓库信息 | 仓库清单 |
+| E 提交上传 | git add/commit/push | 提交与远程 |
+| F 路径反馈 | 汇总全部路径与状态 | 交付报告 |
+
+## 阶段 A：环境检查
+
+按序执行，任何一项不通过先修复再进入下一阶段。
+
+1. **git**：`git --version`。未安装则识别操作系统（Linux 用系统包管理器 apt/yum/dnf，macOS 用 brew，Windows 用 winget/choco 或官网安装包）。**安装涉及管理员权限/系统修改时，先向用户说明并等待确认。**
+2. **gh (GitHub CLI)**：`gh --version`。未安装同样先说明再装。
+3. **gh 登录**：`gh auth status`。未登录时执行：
+   - `gh auth login --hostname github.com --web`（设备授权流程）
+   - 注意：gh 旧版本（如 2.4.x）不支持 `--git-protocol` 标志，用管道喂交互输入：`printf 'HTTPS\nY\n' | gh auth login --hostname github.com --web`
+   - 浏览器打不开时，把一次性验证码和 `https://github.com/login/device` 发给用户，请用户手动授权
+   - 登录完成后运行 `gh auth setup-git` 配置凭据助手（若 push 报 "could not read Username"，重新执行此命令）
+   - **密码/验证码/二次验证一律由用户本人在浏览器完成，绝不要求用户把凭据发到对话中**
+
+## 阶段 B：项目文档准备
+
+1. **先完整读取项目全部文件**（SKILL.md、references、已有 README 等），确保后续产出与项目真实功能一致，不编造。
+2. **README.md**：若缺失或需完善，按 `references/readme-template.md` 的结构编写（项目解决什么问题/主要功能/安装方法/使用方法/输入输出示例），内容必须来自项目真实内容。
+3. **LICENSE**：若缺失，默认提供 MIT（模板见 `references/license-template.md`）。版权人（姓名或 GitHub 账号）向用户确认后再写入，不擅自决定。
+
+## 阶段 C：安全隐患检查
+
+**只报告，不执行 Git 写入操作**。运行 `scripts/scan_secrets.sh <项目绝对路径>` 或按 `references/security-check.md` 的清单手动检查：
+
+- 密码 / Token / API Key / Secret
+- 个人隐私（手机号、邮箱、身份证、真实姓名）
+- 本地绝对路径（/home/、/Users/、/tmp/ 等）
+- 临时文件（.tmp- 目录、工具运行输出）
+- 测试/调试垃圾文件
+- 不应公开的内容（含**提交历史中的作者姓名与邮箱**——Public 仓库会公开展示）
+
+发现敏感内容：列出问题清单和文件位置，给出处理选项（保留/更换提交身份/改写历史），**由用户决策后再继续**。提交历史作者邮箱若用户介意公开，可改用 GitHub noreply 邮箱或改写历史（改写+强制推送属不可逆操作，必须先行说明）。
+
+## 阶段 D：仓库记录
+
+1. 检查 `git remote -v` 与 `git branch --show-current`，记录：远程名（默认 origin）、远程 URL、本地分支（默认 main）、当前提交哈希。
+2. 无远程仓库时创建：`gh repo create <仓库名> --public|--private --source=. --remote=origin --push`
+   - **创建前必须向用户确认**：仓库名称、可见性（Public/Private）、远程名、推送分支，以及"即将执行的操作"。
+   - 仓库名默认取项目目录名或用户指定。
+3. 记录清单（交付时反馈）：仓库名、GitHub URL、远程名、分支、本地路径。
+
+## 阶段 E：提交上传
+
+1. `git add -A` → 检查 `git status` 确认暂存内容与预期一致（尤其确认临时目录已被 .gitignore 排除）。
+2. `git commit -m "<描述性信息>"`。
+3. `git push -u origin <分支>`；若远程已有历史需 `git push --force` 时，**必须先说明原因并等待确认**。
+4. 验证：`git log --oneline`、`git status`、`gh repo view <owner>/<repo> --json name,isPrivate,url,defaultBranchRef`（gh 旧版不支持 visibility 字段，用 isPrivate）。
+
+## 阶段 F：路径反馈（交付报告）
+
+最终回复必须**把所有路径和状态写清楚**，至少包含：
+
+- 本地项目绝对路径
+- 远程仓库完整 URL
+- 远程名称与分支（如 origin / main）
+- 提交历史（哈希 + 信息）
+- 关键文件相对路径（README.md、LICENSE、skill 目录等）
+- 工作区状态（干净/有未提交改动）
+- 尚未完成的事项与原因（如有）
+
+## 边界与安全
+
+- 涉及**管理员权限、系统修改、安装软件、浏览器授权、创建公开仓库、改写历史/强制推送**：先说明，等确认。
+- 用户明确要求检查时"不要执行 Git 操作"，则全程只读。
+- 不在对话中展示、不要求用户提供密码/Token。
+- LICENSE 版权人、提交身份（姓名/邮箱）、仓库可见性等个人信息，先问后写。
