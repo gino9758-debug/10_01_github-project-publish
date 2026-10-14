@@ -1,6 +1,6 @@
 # github-project-publish
 
-GitHub 项目发布全流程技能（Skill）：把本地项目从零发布到 GitHub 并完成首轮提交。
+GitHub 项目发布与版本迭代管理技能（Skill）：把本地项目从零发布到 GitHub，并通过 Tag + Release 管理版本迭代历史。
 
 ## 用途
 
@@ -14,12 +14,13 @@ GitHub 项目发布全流程技能（Skill）：把本地项目从零发布到 G
 4. 检查项目安全隐患（凭据/隐私/路径/临时文件等）
 5. 记录仓库名称/路径等信息
 6. 完成提交上传
+7. 版本迭代管理：语义化版本号、Tag 推送、GitHub Release 与版本迭代说明
 
 ## 目录结构
 
 ```
 github-project-publish/
-├── SKILL.md                        # 核心工作流（6阶段：环境检查→文档准备→安全检查→仓库记录→提交上传→路径反馈）
+├── SKILL.md                        # 核心工作流（7阶段：环境检查→文档准备→安全检查→仓库记录→提交上传→版本迭代→路径反馈）
 ├── references/
 │   ├── security-check.md           # 安全隐患检查清单
 │   ├── readme-template.md          # README 五段式模板
@@ -34,4 +35,6 @@ github-project-publish/
 
 ## 使用方法
 
-对助手说「用 github-project-publish 发布 XX 项目」即可触发完整发布流水线。
+- **发布项目**：对助手说「用 github-project-publish 发布 XX 项目」触发完整发布流水线。
+- **迭代更新**：对助手说「更新 XX 并发布版本/版本迭代」——先提交推送变更，再按语义化版本打 Tag 并创建 GitHub Release（含版本说明）。
+- **查看版本历史**：GitHub 仓库页 → Releases 标签，或访问 `https://github.com/<owner>/<repo>/releases`。
