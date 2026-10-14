@@ -1,6 +1,6 @@
 ---
 name: github-project-publish
-description: GitHub 项目发布全流程技能。把本地项目（尤其含自定义 Skill、文档、代码的仓库）从零发布到 GitHub 并完成首轮提交。触发场景：(1) 用户要求"把项目发布/上传到 GitHub"、"初始化 Git 仓库"、"提交推送"；(2) 用户要求"完善 README"、"添加 LICENSE"、"检查项目安全隐患"后执行发布；(3) 用户要求创建远程仓库（Public/Private）并推送 main 分支。技能固定覆盖：CLI 环境检查（git/gh 安装、版本、gh 登录状态）→ 项目文档准备（README/LICENSE）→ 安全隐患检查 → 仓库信息记录 → 提交上传 → 全路径反馈。执行中涉及安装软件、浏览器授权、创建公开仓库、改写历史/强制推送等动作时，必须先向用户说明并等待确认；不得向用户索要密码或 Token。
+description: GitHub 项目发布全流程技能。把本地项目（尤其含自定义 Skill、文档、代码的仓库）从零发布到 GitHub，或更新已发布仓库并完成提交推送。触发场景：(1) 用户要求"把项目发布/上传到 GitHub"、"初始化 Git 仓库"、"提交推送"、"更新仓库"；(2) 用户要求"完善 README"、"添加 LICENSE"、"检查项目安全隐患"后执行发布；(3) 用户要求创建远程仓库（Public/Private）并推送 main 分支；(4) 用户反馈"GitHub 上看不到更新/仓库"时，先诊断远程状态再处理。技能固定覆盖：CLI 环境检查（git/gh 安装、版本、gh 登录状态）→ 项目文档准备（README/LICENSE）→ 安全隐患检查 → 仓库记录与分支判断（新建/已有）→ 提交上传 → 全路径反馈（含私有仓库查看方式）。执行中涉及安装软件、浏览器授权、创建公开仓库、改写历史/强制推送等动作时，必须先向用户说明并等待确认；不得向用户索要密码或 Token。
 ---
 
 # GitHub 项目发布
@@ -50,20 +50,23 @@ description: GitHub 项目发布全流程技能。把本地项目（尤其含自
 
 发现敏感内容：列出问题清单和文件位置，给出处理选项（保留/更换提交身份/改写历史），**由用户决策后再继续**。提交历史作者邮箱若用户介意公开，可改用 GitHub noreply 邮箱或改写历史（改写+强制推送属不可逆操作，必须先行说明）。
 
-## 阶段 D：仓库记录
+## 阶段 D：仓库记录与分支判断
 
 1. 检查 `git remote -v` 与 `git branch --show-current`，记录：远程名（默认 origin）、远程 URL、本地分支（默认 main）、当前提交哈希。
-2. 无远程仓库时创建：`gh repo create <仓库名> --public|--private --source=. --remote=origin --push`
-   - **创建前必须向用户确认**：仓库名称、可见性（Public/Private）、远程名、推送分支，以及"即将执行的操作"。
-   - 仓库名默认取项目目录名或用户指定。
+2. **分支判断**：
+   - **已有远程（origin 已存在）** → 这是"更新已有仓库"场景，跳过创建，直接进入阶段 E 提交推送。先向用户说明当前远程与本地状态，确认要推送的改动内容。
+   - **无远程** → 创建新仓库：`gh repo create <仓库名> --public|--private --source=. --remote=origin --push`
+     - **创建前必须向用户确认**：仓库名称、可见性（Public/Private）、远程名、推送分支，以及"即将执行的操作"。
+     - 仓库名默认取项目目录名或用户指定。
 3. 记录清单（交付时反馈）：仓库名、GitHub URL、远程名、分支、本地路径。
+4. **用户反馈"看不到仓库/更新"时**，先诊断而非直接重建：`gh repo view <owner>/<repo> --json name,isPrivate,url,pushedAt` 确认仓库存在与最近推送时间；用 `gh api "repos/<owner>/<repo>/contents/" --jq '.[].name'` 列出远程文件。若仓库存在且推送时间符合预期，向用户解释可见性规则（见阶段 F），不要重复创建。
 
 ## 阶段 E：提交上传
 
 1. `git add -A` → 检查 `git status` 确认暂存内容与预期一致（尤其确认临时目录已被 .gitignore 排除）。
 2. `git commit -m "<描述性信息>"`。
 3. `git push -u origin <分支>`；若远程已有历史需 `git push --force` 时，**必须先说明原因并等待确认**。
-4. 验证：`git log --oneline`、`git status`、`gh repo view <owner>/<repo> --json name,isPrivate,url,defaultBranchRef`（gh 旧版不支持 visibility 字段，用 isPrivate）。
+4. 验证：`git log --oneline`、`git status`、`gh repo view <owner>/<repo> --json name,isPrivate,url,defaultBranchRef,pushedAt`（gh 旧版不支持 visibility 字段，用 isPrivate），并用 `gh api "repos/<owner>/<repo>/contents/" --jq '.[].name'` 确认远程文件已更新。
 
 ## 阶段 F：路径反馈（交付报告）
 
@@ -76,6 +79,11 @@ description: GitHub 项目发布全流程技能。把本地项目（尤其含自
 - 关键文件相对路径（README.md、LICENSE、skill 目录等）
 - 工作区状态（干净/有未提交改动）
 - 尚未完成的事项与原因（如有）
+
+**可见性说明（用户困惑时主动解释）：**
+- **私有仓库**：默认不显示在 GitHub 个人主页（"热门存储库/置顶"区只展示公开仓库），贡献仍计入个人贡献图。查看方式：登录 GitHub 后点个人页顶部 **存储库（Repositories）** 标签，即可看到包括私有仓库在内的全部仓库；也可直接访问 `https://github.com/<owner>/<repo>`。
+- **公开仓库**：所有访客可见，主页可显示。
+- 想要私有仓库出现在主页：在仓库 Settings → General → 勾选 "Pin this repository"（置顶）。
 
 ## 边界与安全
 
