@@ -16,6 +16,7 @@ GitHub 项目发布与版本迭代管理技能（Skill）：把本地项目从�
 6. 完成提交上传
 7. 版本迭代管理：语义化版本号、Tag 推送、GitHub Release 与版本迭代说明
 8. **技能仓库命名规范**：分类编号（XX_YY_英文名）、中文描述格式、可见性规则、实例清单（见 `docs/skill-repository-naming-convention.md`）
+9. **双认证模式**：gh CLI 浏览器授权（OAuth/gho_）或 Classic PAT（ghp_）环境变量认证——无 gh 登录态的 agent（如 Aily）可用 repo 权限 PAT 完成发布与迭代
 
 ## 目录结构
 
@@ -40,4 +41,5 @@ github-project-publish/
 
 - **发布项目**：对助手说「用 github-project-publish 发布 XX 项目」触发完整发布流水线。
 - **迭代更新**：对助手说「更新 XX 并发布版本/版本迭代」——先提交推送变更，再按语义化版本打 Tag 并创建 GitHub Release（含版本说明）。
+- **无 gh 登录态的 agent（如 Aily）**：先让用户生成 `repo` 权限的 Classic PAT（https://github.com/settings/tokens/new）并放入环境变量 `GH_TOKEN`，再走同一套流程（详见 SKILL.md「认证模式」一节）。
 - **查看版本历史**：GitHub 仓库页 → Releases 标签，或访问 `https://github.com/<owner>/<repo>/releases`。

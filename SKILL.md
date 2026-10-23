@@ -1,6 +1,6 @@
 ---
 name: github-project-publish
-description: GitHub 项目发布与版本迭代管理全流程技能。把本地项目（尤其含自定义 Skill、文档、代码的仓库）从零发布到 GitHub、更新已发布仓库，并通过 Tag + Release 管理版本迭代。触发场景：(1) 用户要求"把项目发布/上传到 GitHub"、"初始化 Git 仓库"、"提交推送"、"更新仓库"；(2) 用户要求"完善 README"、"添加 LICENSE"、"检查项目安全隐患"后执行发布；(3) 用户要求创建远程仓库（Public/Private）并推送 main 分支；(4) 用户要求"发版本/版本迭代/发布 Release/打 Tag"、"GitHub 上显示版本迭代"；(5) 用户反馈"GitHub 上看不到更新/仓库"时，先诊断远程状态再处理。技能固定覆盖：CLI 环境检查（git/gh 安装、版本、gh 登录状态）→ 项目文档准备（README/LICENSE）→ 安全隐患检查 → 仓库记录与分支判断（新建/已有）→ 提交上传 → 版本迭代（语义化版本 Tag + Release 与版本说明）→ 全路径反馈（含私有仓库查看方式）。执行中涉及安装软件、浏览器授权、创建公开仓库、改写历史/强制推送、打 Tag/创建 Release 等动作时，必须先向用户说明并等待确认；不得向用户索要密码或 Token。
+description: GitHub 项目发布与版本迭代管理全流程技能。把本地项目（尤其含自定义 Skill、文档、代码的仓库）从零发布到 GitHub、更新已发布仓库，并通过 Tag + Release 管理版本迭代。触发场景：(1) 用户要求"把项目发布/上传到 GitHub"、"初始化 Git 仓库"、"提交推送"、"更新仓库"；(2) 用户要求"完善 README"、"添加 LICENSE"、"检查项目安全隐患"后执行发布；(3) 用户要求创建远程仓库（Public/Private）并推送 main 分支；(4) 用户要求"发版本/版本迭代/发布 Release/打 Tag"、"GitHub 上显示版本迭代"；(5) 用户反馈"GitHub 上看不到更新/仓库"时，先诊断远程状态再处理。技能固定覆盖：CLI 环境检查（git/gh 安装、版本、gh 登录状态）→ 项目文档准备（README/LICENSE）→ 安全隐患检查 → 仓库记录与分支判断（新建/已有）→ 提交上传 → 版本迭代（语义化版本 Tag + Release 与版本说明）→ 全路径反馈（含私有仓库查看方式）。提供双认证模式：gh CLI 浏览器授权（OAuth/gho_）与 Classic PAT（ghp_）环境变量认证，适配无 gh 登录态的 agent（如 Aily）通过 repo 权限 PAT 完成发布与迭代。执行中涉及安装软件、浏览器授权、创建公开仓库、改写历史/强制推送、打 Tag/创建 Release 等动作时，必须先向用户说明并等待确认；不得向用户索要密码或 Token。
 ---
 
 # GitHub 项目发布与版本迭代
@@ -19,18 +19,60 @@ description: GitHub 项目发布与版本迭代管理全流程技能。把本地
 | F 版本迭代 | 语义化版本 Tag + Release + 版本说明 | 版本记录 |
 | G 路径反馈 | 汇总全部路径与状态 | 交付报告 |
 
+## 认证模式（Authentication）
+
+本技能支持两种认证模式，任务开始时先按"认证自检流程"自动选用，**不要默认要求用户提供 token**。
+
+### 模式一：gh CLI 已登录（默认，浏览器授权）
+
+环境已执行过 `gh auth login`（OAuth / `gho_` 令牌，存于 `~/.config/gh/hosts.yml`），直接使用，无需任何额外输入。用 `gh auth status` 判断。
+
+### 模式二：Classic PAT（`ghp_`，供无 gh 登录态的 agent 使用）
+
+适用于 Aily 等没有浏览器授权能力的 agent：用户提供一个 **Classic PAT（`ghp_` 开头）**，agent 用其完成全部发布/迭代操作（创建仓库、推送、改可见性、打 Tag、建 Release）。
+
+**Token 要求**：作用域勾选 `repo`（整组，自动含 `public_repo`），即覆盖全部所需能力。
+
+**用户授权入口**：https://github.com/settings/tokens/new → Note 随意填 → 勾选 `repo` → 有效期按需 → Generate token → 复制（仅显示一次）。
+
+**agent 使用方式（三选一）**：
+
+1. **环境变量（推荐，兼容所有 gh 版本）**：
+   ```bash
+   export GH_TOKEN="ghp_xxx"     # gh 自动识别；GITHUB_TOKEN 亦可
+   gh auth status                 # 应显示 Logged in as <user>
+   ```
+2. **管道登入**（gh 较新版本支持 `--with-token`；旧版失败则改用方式 1）：
+   ```bash
+   echo "ghp_xxx" | gh auth login --with-token
+   ```
+3. **REST API 直调**（无 gh 环境/脚本场景，curl 或 urllib 均可）：
+   ```bash
+   curl -H "Authorization: Bearer ghp_xxx" https://api.github.com/user
+   ```
+
+**认证自检流程**（每轮任务开始时执行）：
+
+1. `gh auth status` 成功 → 模式一，继续。
+2. 失败 → 检查环境变量 `GH_TOKEN` / `GITHUB_TOKEN` 是否存在 → 存在 → 模式二（方式 1）。
+3. 都没有 → 按模式二向用户说明：请用户到 https://github.com/settings/tokens/new 生成 `repo` 权限的 Classic PAT，**粘贴到 agent 自己的配置/环境变量中**（不要发到对话、截图或仓库），agent 读取后继续。
+
+**安全红线（模式二同样适用）**：
+
+- Token 只能由用户在 GitHub 官网自行生成；agent 不得索要明文 token 到对话/日志，不写入仓库或提交历史。
+- 涉及创建公开仓库、强制推送、打 Tag/创建 Release 等动作，仍须先向用户说明并确认。
+- 任务结束或用户要求时，提醒用户在 GitHub → Settings → Developer settings → Tokens (classic) → Delete 吊销。
+
 ## 阶段 A：环境检查
 
 按序执行，任何一项不通过先修复再进入下一阶段。
 
 1. **git**：`git --version`。未安装则识别操作系统（Linux 用系统包管理器 apt/yum/dnf，macOS 用 brew，Windows 用 winget/choco 或官网安装包）。**安装涉及管理员权限/系统修改时，先向用户说明并等待确认。**
 2. **gh (GitHub CLI)**：`gh --version`。未安装同样先说明再装。
-3. **gh 登录**：`gh auth status`。未登录时执行：
-   - `gh auth login --hostname github.com --web`（设备授权流程）
-   - 注意：gh 旧版本（如 2.4.x）不支持 `--git-protocol` 标志，用管道喂交互输入：`printf 'HTTPS\nY\n' | gh auth login --hostname github.com --web`
-   - 浏览器打不开时，把一次性验证码和 `https://github.com/login/device` 发给用户，请用户手动授权
-   - 登录完成后运行 `gh auth setup-git` 配置凭据助手（若 push 报 "could not read Username"，重新执行此命令）
-   - **密码/验证码/二次验证一律由用户本人在浏览器完成，绝不要求用户把凭据发到对话中**
+3. **gh 登录**：`gh auth status` 确认认证状态；未登录或环境无 gh 登录态时，按「认证模式」一节处理：
+   - 环境支持浏览器授权 → `gh auth login --hostname github.com --web`（设备授权流程）。注意：gh 旧版本（如 2.4.x）不支持 `--git-protocol` 标志，用管道喂交互输入：`printf 'HTTPS\nY\n' | gh auth login --hostname github.com --web`；浏览器打不开时，把一次性验证码和 `https://github.com/login/device` 发给用户，请用户手动授权；登录后运行 `gh auth setup-git` 配置凭据助手（若 push 报 "could not read Username"，重新执行此命令）
+   - 环境无浏览器授权能力（如 Aily 等第三方 agent）→ 走**模式二**：用户提供 Classic PAT（`ghp_`），放入环境变量 `GH_TOKEN` 后继续（详见「认证模式」一节）
+   - **密码/验证码/二次验证一律由用户本人在浏览器完成；token 由用户在官网生成后放入 agent 配置/环境变量，绝不要求用户把凭据发到对话中**
 
 ## 阶段 B：项目文档准备
 
@@ -118,4 +160,5 @@ description: GitHub 项目发布与版本迭代管理全流程技能。把本地
 - 涉及**管理员权限、系统修改、安装软件、浏览器授权、创建公开仓库、改写历史/强制推送、打 Tag/创建 Release**：先说明，等确认。
 - 用户明确要求检查时"不要执行 Git 操作"，则全程只读。
 - 不在对话中展示、不要求用户提供密码/Token。
+- Classic PAT（`ghp_`）认证模式下，token 由用户自行生成并放入 agent 配置/环境变量（`GH_TOKEN`），agent 不索要、不展示、不记录明文。
 - LICENSE 版权人、提交身份（姓名/邮箱）、仓库可见性、版本号与版本说明等个人信息与对外发布内容，先问后写。
