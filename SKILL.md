@@ -1,6 +1,5 @@
 ---
 name: github-project-publish
-label: GitHub项目发布与版本迭代
 description: GitHub 项目发布与版本迭代管理全流程技能。把本地项目（尤其含自定义 Skill、文档、代码的仓库）从零发布到 GitHub、更新已发布仓库，并通过 Tag + Release 管理版本迭代。触发场景：(1) 用户要求"把项目发布/上传到 GitHub"、"初始化 Git 仓库"、"提交推送"、"更新仓库"；(2) 用户要求"完善 README"、"添加 LICENSE"、"检查项目安全隐患"后执行发布；(3) 用户要求创建远程仓库（Public/Private）并推送 main 分支；(4) 用户要求"发版本/版本迭代/发布 Release/打 Tag"、"GitHub 上显示版本迭代"；(5) 用户反馈"GitHub 上看不到更新/仓库"时，先诊断远程状态再处理。技能固定覆盖：CLI 环境检查（git/gh 安装、版本、gh 登录状态）→ 项目文档准备（README/LICENSE）→ 安全隐患检查 → 仓库记录与分支判断（新建/已有）→ 提交上传 → 版本迭代（语义化版本 Tag + Release 与版本说明）→ 全路径反馈（含私有仓库查看方式）。提供双认证模式：gh CLI 浏览器授权（OAuth/gho_）与 Classic PAT（ghp_）环境变量认证，适配无 gh 登录态的 agent（如 Aily）通过 repo 权限 PAT 完成发布与迭代。执行中涉及安装软件、浏览器授权、创建公开仓库、改写历史/强制推送、打 Tag/创建 Release 等动作时，必须先向用户说明并等待确认；不得向用户索要密码或 Token。
 ---
 
@@ -155,6 +154,27 @@ description: GitHub 项目发布与版本迭代管理全流程技能。把本地
 - **私有仓库**：默认不显示在 GitHub 个人主页（"热门存储库/置顶"区只展示公开仓库），贡献仍计入个人贡献图。查看方式：登录 GitHub 后点个人页顶部 **存储库（Repositories）** 标签，即可看到包括私有仓库在内的全部仓库；也可直接访问 `https://github.com/<owner>/<repo>`。
 - **公开仓库**：所有访客可见，主页可显示。
 - 想要私有仓库出现在主页：在仓库 Settings → General → 勾选 "Pin this repository"（置顶）。
+
+## 仓库标准检查清单（Acceptance Checklist）
+
+发布/整理技能仓库后，按此清单逐项验收，**全部通过才算完成**。适用于批量发布、Aily 等 agent 代发后的统一体检。
+
+| # | 检查项 | 标准 | 核验方式 |
+|---|--------|------|----------|
+| 1 | 仓库命名 | `XX_YY_英文名`（类别编号_顺序号_英文名）；GitHub 不支持中文仓库名，中文名一律放描述 | `gh api "user/repos" --jq '.[].name'` |
+| 2 | 必备文件 | SKILL.md、README.md、LICENSE、.gitignore 齐全，references/ 按需 | `gh api "repos/<owner>/<repo>/contents/" --jq '.[].name'` |
+| 3 | 中文描述 | 「中文名 - XX_YY_英文名（一句话定位 Skill）」 | `gh repo view <owner>/<repo> --json description` |
+| 4 | 可见性 | 无个人信息 → public；含隐私 → 脱敏后 public，无法脱敏 → private | `gh api "repos/<owner>/<repo>" --jq .private` |
+| 5 | 隐私扫描 | 无真实姓名/孩子信息/手机/邮箱/身份证/地址/本地绝对路径 | 见下方关键词清单 |
+| 6 | LICENSE | MIT License © <年份> <账号>，内容与仓库一致 | 直读远端 `contents/LICENSE` |
+| 7 | 编号唯一性 | 同类内顺序号不重复；预留号（如 02_01）不被占用 | 对照命名规范文档实例清单 |
+| 8 | 空壳排查 | 仓库必须有实际内容（SKILL.md 等），空仓库（无 commit）需删除或补内容 | 直查 `git/trees/<默认分支>`，409=空壳 |
+
+**隐私扫描关键词**（命中即需脱敏或保持私有）：真实姓名、家庭成员信息（孩子出生年份/兴趣特征）、手机号 `1[3-9][0-9]{9}`、邮箱、身份证号 `[0-9]{17}[0-9Xx]`、家庭地址、本地绝对路径 `/home/`、`/Users/`。
+
+**脱敏惯例**：真实姓名 → 替换为"使用者"；家庭背景段落 → 整段删除；手机/邮箱 → 删除或占位。脱敏后必须重新扫描确认无残留，再设 public。
+
+**双通道复核**：`gh api "repos/<owner>/<repo>/contents/LICENSE"`（文件层）+ `gh repo view <owner>/<repo>`（元数据层），两项都通过才交付。
 
 ## 边界与安全
 
