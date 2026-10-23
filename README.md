@@ -4,7 +4,7 @@ GitHub 项目发布与版本迭代管理技能（Skill）：把本地项目从�
 
 ## 用途
 
-本仓库为**私有储藏**用途，用于备份和版本管理「github-project-publish」技能本体。
+本仓库为「github-project-publish」技能本体 + **技能仓库命名与发布规范**的标准储藏库，是账号内全部技能仓库发布、命名、可见性管理与版本迭代的统一依据。
 
 ## 技能覆盖能力
 
@@ -15,12 +15,15 @@ GitHub 项目发布与版本迭代管理技能（Skill）：把本地项目从�
 5. 记录仓库名称/路径等信息
 6. 完成提交上传
 7. 版本迭代管理：语义化版本号、Tag 推送、GitHub Release 与版本迭代说明
+8. **技能仓库命名规范**：分类编号（XX_YY_英文名）、中文描述格式、可见性规则、实例清单（见 `docs/skill-repository-naming-convention.md`）
 
 ## 目录结构
 
 ```
 github-project-publish/
 ├── SKILL.md                        # 核心工作流（7阶段：环境检查→文档准备→安全检查→仓库记录→提交上传→版本迭代→路径反馈）
+├── docs/
+│   └── skill-repository-naming-convention.md   # 技能仓库命名与发布规范（分类编号/描述/可见性/实例/迭代/协同约定）
 ├── references/
 │   ├── security-check.md           # 安全隐患检查清单
 │   ├── readme-template.md          # README 五段式模板
