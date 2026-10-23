@@ -1,5 +1,6 @@
 ---
 name: github-project-publish
+label: GitHub项目发布与版本迭代
 description: GitHub 项目发布与版本迭代管理全流程技能。把本地项目（尤其含自定义 Skill、文档、代码的仓库）从零发布到 GitHub、更新已发布仓库，并通过 Tag + Release 管理版本迭代。触发场景：(1) 用户要求"把项目发布/上传到 GitHub"、"初始化 Git 仓库"、"提交推送"、"更新仓库"；(2) 用户要求"完善 README"、"添加 LICENSE"、"检查项目安全隐患"后执行发布；(3) 用户要求创建远程仓库（Public/Private）并推送 main 分支；(4) 用户要求"发版本/版本迭代/发布 Release/打 Tag"、"GitHub 上显示版本迭代"；(5) 用户反馈"GitHub 上看不到更新/仓库"时，先诊断远程状态再处理。技能固定覆盖：CLI 环境检查（git/gh 安装、版本、gh 登录状态）→ 项目文档准备（README/LICENSE）→ 安全隐患检查 → 仓库记录与分支判断（新建/已有）→ 提交上传 → 版本迭代（语义化版本 Tag + Release 与版本说明）→ 全路径反馈（含私有仓库查看方式）。提供双认证模式：gh CLI 浏览器授权（OAuth/gho_）与 Classic PAT（ghp_）环境变量认证，适配无 gh 登录态的 agent（如 Aily）通过 repo 权限 PAT 完成发布与迭代。执行中涉及安装软件、浏览器授权、创建公开仓库、改写历史/强制推送、打 Tag/创建 Release 等动作时，必须先向用户说明并等待确认；不得向用户索要密码或 Token。
 ---
 
